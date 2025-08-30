@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Chat WebSocket</title>
+  <style>
+    body { font-family: sans-serif; max-width: 400px; margin: auto; }
+    #chat { border: 1px solid #ccc; height: 300px; overflow-y: auto; padding: 5px; }
+    input { width: 100%; padding: 8px; margin-top: 5px; }
+  </style>
+</head>
+<body>
+  <h2>Chat em tempo real</h2>
+  <div id="chat"></div>
+  <input id="name" placeholder="Digite seu nome e pressione Enter">
+  <input id="msg" placeholder="Digite uma mensagem" disabled>
+
+  <script type="module">
+    const ws = new WebSocket("ws://localhost:8080");
+    const chat = document.getElementById("chat");
+    const nameInput = document.getElementById("name");
+    const msgInput = document.getElementById("msg");
+
+    ws.onmessage = e => {
+      const p = document.createElement("p");
+      p.textContent = e.data;
+      chat.appendChild(p);
+      chat.scrollTop = chat.scrollHeight;
+    };
+
+    nameInput.addEventListener("keypress", e => {
+      if (e.key === "Enter") {
+        ws.send(JSON.stringify({ type: "join", name: nameInput.value }));
+        nameInput.disabled = true;
+        msgInput.disabled = false;
+        msgInput.focus();
+      }
+    });
+
+    msgInput.addEventListener("keypress", e => {
+      if (e.key === "Enter") {
+        ws.send(JSON.stringify({ type: "chat", message: msgInput.value }));
+        msgInput.value = "";
+      }
+    });
+  </script>
+</body>
+</html>
