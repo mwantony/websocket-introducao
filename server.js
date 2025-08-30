@@ -3,8 +3,12 @@ import { WebSocketServer } from "ws";
 
 const wss = new WebSocketServer({ port: 8080 });
 const clients = new Map();
+const history = []; // histórico das mensagens
 
 wss.on("connection", ws => {
+  // Envia o histórico ao novo cliente
+  history.forEach(msg => ws.send(msg));
+
   ws.on("message", msg => {
     const data = JSON.parse(msg);
 
@@ -22,11 +26,12 @@ wss.on("connection", ws => {
   ws.on("close", () => {
     const name = clients.get(ws);
     clients.delete(ws);
-    broadcast(`${name} saiu do chat`);
+    if (name) broadcast(`${name} saiu do chat`);
   });
 });
 
 function broadcast(message) {
+  history.push(message); // salva no histórico
   wss.clients.forEach(client => {
     if (client.readyState === 1) {
       client.send(message);

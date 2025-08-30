@@ -2,47 +2,334 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
-  <title>Chat WebSocket</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat WebSocket Moderno</title>
   <style>
-    body { font-family: sans-serif; max-width: 400px; margin: auto; }
-    #chat { border: 1px solid #ccc; height: 300px; overflow-y: auto; padding: 5px; }
-    input { width: 100%; padding: 8px; margin-top: 5px; }
+    :root {
+      --primary-color: #6366f1;
+      --primary-hover: #4f46e5;
+      --secondary-color: #f3f4f6;
+      --text-color: #1f2937;
+      --light-text: #6b7280;
+      --border-color: #e5e7eb;
+      --message-self: #e0e7ff;
+      --message-other: #f9fafb;
+      --system-message: #ffedd5;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background-color: #f9fafb;
+      color: var(--text-color);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 16px;
+    }
+
+    .chat-container {
+      background-color: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      width: 100%;
+      max-width: 400px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      height: 600px;
+    }
+
+    .chat-header {
+      background-color: var(--primary-color);
+      color: white;
+      padding: 16px;
+      text-align: center;
+      font-weight: 600;
+      font-size: 1.2rem;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .message {
+      max-width: 80%;
+      padding: 10px 14px;
+      border-radius: 18px;
+      margin-bottom: 4px;
+      position: relative;
+      animation: fadeIn 0.2s ease-out;
+    }
+
+    .message-self {
+      align-self: flex-end;
+      background-color: var(--message-self);
+      border-bottom-right-radius: 4px;
+    }
+
+    .message-other {
+      align-self: flex-start;
+      background-color: var(--message-other);
+      border-bottom-left-radius: 4px;
+    }
+
+    .message-system {
+      align-self: center;
+      background-color: var(--system-message);
+      font-style: italic;
+      max-width: 90%;
+      text-align: center;
+      font-size: 0.9rem;
+    }
+
+    .message-sender {
+      font-weight: 600;
+      font-size: 0.8rem;
+      margin-bottom: 4px;
+      color: var(--light-text);
+    }
+
+    .message-content {
+      word-break: break-word;
+    }
+
+    .message-time {
+      font-size: 0.7rem;
+      text-align: right;
+      color: var(--light-text);
+      margin-top: 4px;
+    }
+
+    .chat-input-container {
+      padding: 16px;
+      border-top: 1px solid var(--border-color);
+      background-color: white;
+    }
+
+    .input-field {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid var(--border-color);
+      border-radius: 24px;
+      outline: none;
+      transition: border-color 0.2s;
+      font-size: 1rem;
+    }
+
+    .input-field:focus {
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+    }
+
+    .input-field:disabled {
+      background-color: var(--secondary-color);
+      cursor: not-allowed;
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      font-size: 0.8rem;
+      color: var(--light-text);
+      border-top: 1px solid var(--border-color);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #22c55e;
+    }
+
+    .status-dot.connecting {
+      background-color: #eab308;
+    }
+
+    .status-dot.disconnected {
+      background-color: #ef4444;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Personalização da barra de rolagem */
+    .chat-messages::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .chat-messages::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .chat-messages::-webkit-scrollbar-thumb {
+      background-color: #c5c5c5;
+      border-radius: 3px;
+    }
+
+    .chat-messages::-webkit-scrollbar-thumb:hover {
+      background-color: #a5a5a5;
+    }
   </style>
 </head>
 <body>
-  <h2>Chat em tempo real</h2>
-  <div id="chat"></div>
-  <input id="name" placeholder="Digite seu nome e pressione Enter">
-  <input id="msg" placeholder="Digite uma mensagem" disabled>
+  <div class="chat-container">
+    <div class="chat-header">
+      Chat em Tempo Real
+    </div>
+    
+    <div class="chat-messages" id="chat">
+      <div class="message message-system">
+        Conectando ao servidor...
+      </div>
+    </div>
+    
+    <div class="status-indicator">
+      <div class="status-dot connecting" id="status-dot"></div>
+      <span id="status-text">Conectando...</span>
+    </div>
+    
+    <div class="chat-input-container">
+      <input type="text" class="input-field" id="name" placeholder="Digite seu nome e pressione Enter" autocomplete="off">
+      <input type="text" class="input-field" id="msg" placeholder="Digite uma mensagem" disabled autocomplete="off">
+    </div>
+  </div>
 
   <script type="module">
     const ws = new WebSocket("ws://localhost:8080");
     const chat = document.getElementById("chat");
     const nameInput = document.getElementById("name");
     const msgInput = document.getElementById("msg");
+    const statusDot = document.getElementById("status-dot");
+    const statusText = document.getElementById("status-text");
+    
+    let userName = '';
+    let connectionEstablished = false;
 
-    ws.onmessage = e => {
-      const p = document.createElement("p");
-      p.textContent = e.data;
-      chat.appendChild(p);
+    // Função para formatar a hora atual
+    function getCurrentTime() {
+      return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    // Função para adicionar mensagem ao chat
+    function addMessage(content, type = 'other', sender = '') {
+      const messageEl = document.createElement('div');
+      messageEl.classList.add('message', `message-${type}`);
+      
+      if (type !== 'system' && sender) {
+        const senderEl = document.createElement('div');
+        senderEl.classList.add('message-sender');
+        senderEl.textContent = sender;
+        messageEl.appendChild(senderEl);
+      }
+      
+      const contentEl = document.createElement('div');
+      contentEl.classList.add('message-content');
+      contentEl.textContent = content;
+      messageEl.appendChild(contentEl);
+      
+      const timeEl = document.createElement('div');
+      timeEl.classList.add('message-time');
+      timeEl.textContent = getCurrentTime();
+      messageEl.appendChild(timeEl);
+      
+      chat.appendChild(messageEl);
       chat.scrollTop = chat.scrollHeight;
+    }
+
+    // Atualizar status da conexão
+    function updateConnectionStatus(status, text) {
+      statusDot.className = 'status-dot ' + status;
+      statusText.textContent = text;
+    }
+
+    // Eventos do WebSocket
+    ws.onopen = () => {
+      connectionEstablished = true;
+      updateConnectionStatus('', 'Conectado');
+      chat.innerHTML = '';
+      addMessage('Conectado ao chat. Digite seu nome para começar.', 'system');
     };
 
+    ws.onclose = () => {
+      connectionEstablished = false;
+      updateConnectionStatus('disconnected', 'Desconectado');
+      addMessage('Conexão perdida. Tentando reconectar...', 'system');
+    };
+
+    ws.onerror = (error) => {
+      console.error('Erro WebSocket:', error);
+      updateConnectionStatus('disconnected', 'Erro de conexão');
+      addMessage('Erro na conexão com o servidor.', 'system');
+    };
+
+    ws.onmessage = e => {
+      try {
+        const data = JSON.parse(e.data);
+        
+        if (data.type === 'system') {
+          addMessage(data.message, 'system');
+        } else if (data.type === 'chat') {
+          const messageType = data.sender === userName ? 'self' : 'other';
+          addMessage(data.message, messageType, data.sender);
+        } else if (data.type === 'join') {
+          addMessage(`${data.name} entrou no chat.`, 'system');
+        } else if (data.type === 'leave') {
+          addMessage(`${data.name} saiu do chat.`, 'system');
+        }
+      } catch (error) {
+        // Se não for JSON, trata como mensagem de texto simples
+        addMessage(e.data, 'other', 'Sistema');
+      }
+    };
+
+    // Evento para inserir nome de usuário
     nameInput.addEventListener("keypress", e => {
-      if (e.key === "Enter") {
-        ws.send(JSON.stringify({ type: "join", name: nameInput.value }));
+      if (e.key === "Enter" && nameInput.value.trim() !== "") {
+        userName = nameInput.value.trim();
+        ws.send(JSON.stringify({ type: "join", name: userName }));
         nameInput.disabled = true;
         msgInput.disabled = false;
         msgInput.focus();
+        msgInput.placeholder = `Digite uma mensagem, ${userName}`;
       }
     });
 
+    // Evento para enviar mensagem
     msgInput.addEventListener("keypress", e => {
-      if (e.key === "Enter") {
-        ws.send(JSON.stringify({ type: "chat", message: msgInput.value }));
+      if (e.key === "Enter" && msgInput.value.trim() !== "") {
+        ws.send(JSON.stringify({ 
+          type: "chat", 
+          message: msgInput.value.trim(),
+          sender: userName
+        }));
         msgInput.value = "";
       }
     });
+
+    // Foco inicial no campo de nome
+    nameInput.focus();
   </script>
 </body>
 </html>
